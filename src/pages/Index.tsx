@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Clock, Plus, User, LogOut, MessageSquare } from 'lucide-react';
+import { Clock, Plus, User, LogOut, MessageSquare, Quote } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -13,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Task {
   id: string;
@@ -101,6 +101,8 @@ const Index = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [newTask, setNewTask] = useState({ title: '', description: '', date: '' });
   const [activeColumn, setActiveColumn] = useState('');
+  const [quote, setQuote] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -108,6 +110,42 @@ const Index = () => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchQuote = async () => {
+      try {
+        const response = await fetch('/functions/generate-quote');
+        const data = await response.json();
+        if (data.quote) {
+          setQuote(data.quote);
+        }
+      } catch (error) {
+        console.error('Error fetching quote:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch today's motivational quote",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchQuote();
+
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+
+    const refreshQuoteTimeout = setTimeout(() => {
+      fetchQuote();
+      setInterval(fetchQuote, 24 * 60 * 60 * 1000);
+    }, timeUntilMidnight);
+
+    return () => {
+      clearTimeout(refreshQuoteTimeout);
+    };
   }, []);
 
   const handleAddTask = (columnId: string) => {
@@ -169,24 +207,32 @@ const Index = () => {
   return (
     <div className="min-h-screen p-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-[#1a4b6e]">
-          {format(currentTime, 'hh:mm a')}
-        </h1>
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-            <MessageSquare className="w-5 h-5" />
-            <span>Feedback</span>
-          </button>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm">
-            <User className="w-5 h-5" />
-            <span>User Name</span>
+      <div className="flex flex-col gap-4 mb-8">
+        <div className="flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-[#1a4b6e]">
+            {format(currentTime, 'hh:mm a')}
+          </h1>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+              <MessageSquare className="w-5 h-5" />
+              <span>Feedback</span>
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm">
+              <User className="w-5 h-5" />
+              <span>User Name</span>
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
+              <LogOut className="w-5 h-5" />
+              <span>Logout</span>
+            </button>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow">
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
         </div>
+        {quote && (
+          <div className="flex items-center gap-2 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+            <Quote className="w-5 h-5 text-[#97c8eb]" />
+            <p className="text-[#1a4b6e] font-medium italic">{quote}</p>
+          </div>
+        )}
       </div>
 
       {/* Kanban Board */}
