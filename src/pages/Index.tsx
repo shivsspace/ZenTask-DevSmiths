@@ -3,6 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, Plus, User, LogOut, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 interface Task {
   id: string;
@@ -89,6 +99,8 @@ const initialColumns: { [key: string]: Column } = {
 const Index = () => {
   const [columns, setColumns] = useState(initialColumns);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [newTask, setNewTask] = useState({ title: '', description: '', date: '' });
+  const [activeColumn, setActiveColumn] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -97,6 +109,27 @@ const Index = () => {
 
     return () => clearInterval(timer);
   }, []);
+
+  const handleAddTask = (columnId: string) => {
+    if (!newTask.title.trim()) return;
+
+    const task: Task = {
+      id: Date.now().toString(),
+      title: newTask.title,
+      description: newTask.description,
+      date: newTask.date,
+    };
+
+    setColumns(prev => ({
+      ...prev,
+      [columnId]: {
+        ...prev[columnId],
+        tasks: [...prev[columnId].tasks, task]
+      }
+    }));
+
+    setNewTask({ title: '', description: '', date: '' });
+  };
 
   const onDragEnd = (result: any) => {
     const { source, destination } = result;
@@ -134,7 +167,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen p-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-[#1a4b6e]">
@@ -198,10 +231,57 @@ const Index = () => {
                       </Draggable>
                     ))}
                     {provided.placeholder}
-                    <button className="add-task-button">
-                      <Plus className="w-5 h-5" />
-                      Add Task
-                    </button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button 
+                          className="add-task-button"
+                          onClick={() => setActiveColumn(column.id)}
+                        >
+                          <Plus className="w-5 h-5" />
+                          Add Task
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Task</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="title">Title</Label>
+                            <Input
+                              id="title"
+                              value={newTask.title}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                              placeholder="Enter task title"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="description">Description</Label>
+                            <Input
+                              id="description"
+                              value={newTask.description}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Enter task description"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="date">Due Date</Label>
+                            <Input
+                              id="date"
+                              type="date"
+                              value={newTask.date}
+                              onChange={(e) => setNewTask(prev => ({ ...prev, date: e.target.value }))}
+                            />
+                          </div>
+                          <Button 
+                            className="w-full"
+                            onClick={() => handleAddTask(activeColumn)}
+                          >
+                            Add Task
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 )}
               </Droppable>
